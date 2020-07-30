@@ -1,0 +1,85 @@
+plugins {
+    id 'base'
+    id 'distribution'
+    id "com.jfrog.artifactory" version "4.16.1"
+}
+
+archivesBaseName = "twitter-wall-devops"
+version = '0.0.1'
+
+def installer_version = "${System.env.INSTALLER_VERSION}" == 'null' ?
+                "${project.version}" : "${System.env.INSTALLER_VERSION}"
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'base'
+apply plugin: 'distribution'
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'maven-publish'
+
+task packageZip(type: Zip) {
+    dependsOn build
+
+    from("$projectDir") {
+        include("**")
+        file(".gitignore").eachLine {
+        if (!it.startsWith("#") && !it.isEmpty()){
+          exclude(it)
+        }
+        }
+    }
+    destinationDir buildDir
+
+    archiveVersion = "$installer_version"
+}
+
+task packageTar(type: Tar) {
+    dependsOn build
+
+    from("$projectDir") {
+        include("**")
+        file(".gitignore").eachLine {
+          if (!it.startsWith("#") && !it.isEmpty()){
+            exclude(it)
+          }
+        }
+    }
+    destinationDir buildDir
+
+    archiveVersion = "$installer_version"
+    extension 'tar'
+    compression = Compression.GZIP
+}
+
+artifactoryPublish.dependsOn(packageTar)
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            group = 'com.acichonski.installer'
+            version = "${installer_version}"
+            artifact("$buildDir/${archivesBaseName}-${installer_version}.tar") {
+                extension "tar"
+            }
+        }
+    }
+}
+// artifact source: file("${payloadDir}/${BusinessGlossaryAnywhereClient-${buildLabel}.zip}"), classifier: null, extension: 'zip'
+
+artifactory {
+    publish {
+            contextUrl = 'http://localhost:8082/artifactory/'
+            repository {
+            repoKey = "twitter-wall-installer"
+            username = "jenkins_user"
+            password = "password"
+            maven = true
+        }
+        defaults {
+            publications('maven')
+            publishArtifacts = true
+        }
+    }
+}

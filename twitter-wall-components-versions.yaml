@@ -1,2 +1,2 @@
-twitter-wall-server: 32_10b5c5de
-twitter-wall-frontend: init
+twitter_wall_server_image_tag: 32_10b5c5de
+twitter_wall_frontend_image_tag: init
